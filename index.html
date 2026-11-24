@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTU Computer Networks 3150710 subnetting calculator: network, broadcast, hosts, equal subnets and VLSM</title>
+<meta name="description" content="Subnetting is pure arithmetic, but one wrong block size and every address after it is wrong. IP with /prefix daalo and the page gives network,">
+<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;line-height:1.5}input,textarea,select{margin:.3rem 0;padding:.3rem;width:min(100%,360px);box-sizing:border-box}textarea{width:min(100%,520px);min-height:6rem;font-family:ui-monospace,monospace}#out{font-weight:bold;margin-top:1rem;white-space:pre-wrap;font-family:ui-monospace,monospace;overflow-x:auto}</style></head><body>
+<h1>GTU Computer Networks 3150710 subnetting calculator: network, broadcast, hosts, equal subnets and VLSM</h1>
+<p>Subnetting is pure arithmetic, but one wrong block size and every address after it is wrong. IP with /prefix daalo and the page gives network, broadcast, first and last host, mask, wildcard and class. It can also split a block into N equal subnets or do VLSM for a list of host counts, with the full allocation table. Practice values are my own.</p>
+<h2>Tool</h2>
+<label>IP / prefix<br><input id="ip" value="192.168.10.77/27"></label><br>
+<label>Split into how many equal subnets (optional)<br><input id="k" value="4"></label><br>
+<label>VLSM host counts for this block (optional, comma separated)<br><input id="v" value=""></label><br>
+<button type="button" onclick="go()">Show</button>
+<div id="out"></div>
+<h2>Facts used</h2>
+<ul><li>Block size = 2^(32 - prefix). Network address = IP rounded down to a multiple of the block size in the interesting octet.</li><li>Broadcast = network + block size - 1. Usable hosts = block size - 2 for prefixes up to /30.</li><li>/31 links have 2 usable addresses (RFC 3021, point to point) and /32 is a single host. Old textbooks say 0 for /31, so mention both if asked.</li><li>To make N equal subnets, borrow b bits where 2^b &gt;= N. Each borrowed bit halves the block.</li><li>VLSM: sort requirements largest first. Each subnet gets the smallest block with block - 2 &gt;= hosts, placed at the next free aligned address.</li><li>Default example: 192.168.10.77/27 has block 32, network 192.168.10.64, broadcast 192.168.10.95, hosts .65 to .94 (30 usable).</li></ul>
+<h2>Galti mat karna</h2>
+<ul><li>Write the mask in both forms (/27 and 255.255.255.224). A question may give one and ask for the other.</li><li>Show the block size first. Every later number follows from it, so the examiner can give step marks.</li><li>For VLSM, always allocate the biggest network first. Starting small breaks alignment and wastes space.</li><li>Private ranges: 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16.</li></ul>
+<p>GTU Hero has the Winter 2025 Computer Networks (3150710) paper page: 70 marks and 25 questions extracted. Open it on <a href="https://gtuhero.com/gtu-papers/gujarat-technological-university-3150710-computer-networks-winter-2025">GTU Hero</a> (GTU Hero is my project). Source and tests: <a href="https://github.com/PrinceAdvant/gtu-cn-subnetting-calculator">github.com/PrinceAdvant/gtu-cn-subnetting-calculator</a>.</p>
+<script src="calc.js"></script>
+<script>
+function show(r){ return r.network + '/' + r.prefix + '  hosts ' + r.first + ' to ' + r.last + '  broadcast ' + r.broadcast + '  (' + r.usable + ' usable)'; }
+function go(){
+  let out;
+  try {
+    const c = F.parseCidr(document.getElementById('ip').value), r = F.info(c.ip, c.prefix);
+    out = 'Network:   ' + r.network + '/' + r.prefix + '\nBroadcast: ' + r.broadcast + '\nHosts:     ' + r.first + ' to ' + r.last + ' (' + r.usable + ' usable, block ' + r.size + ')' +
+      '\nMask:      ' + r.mask + '\nWildcard:  ' + r.wildcard + '\nClass:     ' + r.cls + (r.private ? ', private range' : ', public range');
+    const k = document.getElementById('k').value.trim();
+    if (k) { const s = F.split(c.ip, c.prefix, +k); out += '\n\nEqual subnets: borrow ' + s.borrow + ' bit(s), new prefix /' + s.newPrefix + ', ' + s.total + ' subnets\n' + s.list.slice(0, 64).map((x, i) => 'S' + (i + 1) + ': ' + show(x)).join('\n') + (s.total > 64 ? '\n(first 64 shown)' : ''); }
+    const v = document.getElementById('v').value.trim();
+    if (v) { const p = F.vlsm(c.ip, c.prefix, v.split(/[\s,]+/).map(Number)); out += '\n\nVLSM (largest first):\n' + p.list.map(x => x.need + ' hosts -> ' + show(x)).join('\n') + '\nUnused addresses left: ' + p.free; }
+  } catch (err) { out = 'Check your input: ' + err.message; }
+  document.getElementById('out').textContent = out;
+}
+go();
+</script>
+</body></html>
